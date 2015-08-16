@@ -1,48 +1,55 @@
 ﻿using UnityEngine;
 using System.Collections;
+using DG.Tweening;
 
 public class Cell : MonoBehaviour
 {
-	public string type;
-	public int doorSetVector;
-	[SerializeField] public Vector3 cellPosition;
+	[SerializeField] private bool _isActive;
+	private GameObject _marker;
+	private Vector2 _id;
+	private Enemy _enemy;
 
-	public void InitCell (Vector3 pos)
+	private void Start ()
 	{
-		cellPosition = pos;
-		transform.localPosition = cellPosition;
+		DOTween.Init ();
 	}
 
-	public void CreateCell ()
+	public bool GetIsActive ()
 	{
-		GameObject obj;
+		return _isActive;
+	}
 
-		switch (type) {
-		case "Wall_F":
-			obj = GameObject.CreatePrimitive (PrimitiveType.Capsule);
-			obj.transform.SetParent (transform);
-			obj.transform.localPosition = Vector3.zero;
-			break;
-		case "Wall_L":
-			obj = GameObject.CreatePrimitive (PrimitiveType.Capsule);
-			obj.transform.SetParent (transform);
-			obj.transform.localPosition = Vector3.zero;
-			break;
-		case "Tile":
-			obj = GameObject.CreatePrimitive (PrimitiveType.Cube);
-			obj.transform.SetParent (transform);
-			obj.transform.localPosition = Vector3.zero;
-			break;
-		case "Door_Entrance":
-			obj = GameObject.CreatePrimitive (PrimitiveType.Cylinder);
-			obj.transform.SetParent (transform);
-			obj.transform.localPosition = Vector3.zero;
-			break;
-		case "Door_Exit":
-			obj = GameObject.CreatePrimitive (PrimitiveType.Cylinder);
-			obj.transform.SetParent (transform);
-			obj.transform.localPosition = Vector3.zero;
-			break;
-		}
+	public Vector2 GetID ()
+	{
+		return _id;
+	}
+
+	public Enemy GetEnemy ()
+	{
+		return _enemy;
+	}
+
+	public void SetEnemy (Enemy enemy)
+	{
+		_enemy = enemy;
+	}
+
+	public void CreateCellData (Vector2 id)
+	{
+		_id = id;
+		_marker = GameObject.CreatePrimitive (PrimitiveType.Cube);
+		_marker.transform.SetParent (transform);
+		_marker.transform.localPosition = new Vector3 (0, 0, 0);
+		_marker.transform.localScale = Vector3.zero;
+	}
+
+	public void DestroyMaker ()
+	{
+		Destroy (_marker);
+	}
+
+	public void OnTriggerEnter (Collider other)
+	{
+		_isActive = true;
 	}
 }

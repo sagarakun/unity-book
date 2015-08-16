@@ -50,6 +50,7 @@
      <Compile Include="Assets\Scripts\Editor\CharacterDefineBuilder.cs" />
      <Compile Include="Assets\Scripts\Editor\MapBuilder.cs" />
      <Compile Include="Assets\Scripts\Editor\RoomBuilder.cs" />
+     <None Include="Assets\Demigiant\DOTween\readme.txt" />
  <Reference Include="UnityEngine.UI">
  <HintPath>/Applications/Unity5.1.0/Unity.app/Contents/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
  </Reference>
@@ -64,6 +65,12 @@
  </Reference>
  <Reference Include="UnityEngine.Analytics">
  <HintPath>/Applications/Unity5.1.0/Unity.app/Contents/UnityExtensions/Unity/UnityAnalytics/UnityEngine.Analytics.dll</HintPath>
+ </Reference>
+ <Reference Include="DOTween">
+ <HintPath>/Users/a11915/a unity book project/Assets/Demigiant/DOTween/DOTween.dll</HintPath>
+ </Reference>
+ <Reference Include="DOTweenEditor">
+ <HintPath>/Users/a11915/a unity book project/Assets/Demigiant/DOTween/Editor/DOTweenEditor.dll</HintPath>
  </Reference>
  <Reference Include="UnityEditor.Graphs">
  <HintPath>/Applications/Unity5.1.0/Unity.app/Contents/Frameworks/Managed/UnityEditor.Graphs.dll</HintPath>
