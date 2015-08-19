@@ -1,0 +1,14 @@
+﻿<Properties StartupItem="Assembly-CSharp-vs.csproj">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets/Scripts/Enemy.cs">
+    <Files>
+      <File FileName="Assets/Scripts/Enemy.cs" Line="99" Column="3" />
+      <File FileName="Assets/Scripts/Map.cs" Line="185" Column="2" NotebookId="1" />
+      <File FileName="Assets/Scripts/AStarLog.cs" Line="9" Column="20" NotebookId="1" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+</Properties>

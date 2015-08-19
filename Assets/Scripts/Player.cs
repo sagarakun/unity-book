@@ -9,7 +9,6 @@ public class Player : MonoBehaviour
 
 	[SerializeField] private Map _map;
 	private float _duration;
-	private List<ActionData> _listActionLog;
 	private Human _human;
 	private Vector2 _id;
 	private Vector3 _prevPos;
@@ -22,6 +21,13 @@ public class Player : MonoBehaviour
 		Back,
 		Right,
 		Left
+	}
+
+	private enum enumActionPlayer
+	{
+		Attack,
+		Move,
+		Damage,
 	}
 
 	/* - - - - - - - - - - - - - */
@@ -47,7 +53,6 @@ public class Player : MonoBehaviour
 	{
 		DOTween.Init ();
 		_isRight = false;
-		_listActionLog = new List<ActionData> ();
 		_human = transform.Find ("human").GetComponent<Human> ();
 		yield break;
 	}
@@ -90,45 +95,40 @@ public class Player : MonoBehaviour
 		var vec = new Vector2 (x, z);
 		var xr = _id.x + vec.x;
 		var yr = _id.y + vec.y;
-		var cell = _map.GetListCell () [(int)xr] [(int)yr];
+		var cell = _map.GetListCells () [(int)xr] [(int)yr];
 
 		if (!IsCellActive (cell))
 			yield break;
 
-		var act = ScriptableObject.CreateInstance<ActionData> ();
-
-		if (cell.GetEnemy () != null) {//敵のいるcellに進もうとした場合			
-			act.vec = vec;
-			act.type = ActionData.enumActionType.ATTACK;
-			cell.GetEnemy ().Damage (_id);
-
+		enumActionPlayer type; 
+		if (cell.GetObj () != null) {//敵のいるcellに進もうとした場合			
+			type = enumActionPlayer.Attack;
+			var enemy = cell.GetObj ().GetComponent<Enemy> ();
+			enemy.Damage (_id);
 		} else {//何も無いcellに進もうとした場合
-			act.vec = vec;
-			act.type = ActionData.enumActionType.MOVE;
+			type = enumActionPlayer.Move;
 		}
 
-		//あんま入力増えすぎると感覚ズレるので1まで記録
-		if (_listActionLog.Count >= 0) {
-			_listActionLog.Add (act);
-			yield return StartCoroutine (SequenceAction (act));
-		}
+		yield return StartCoroutine (SequenceAction (type, vec));
 
 		yield break;
 	}
 
 	//アクションを実行
-	private IEnumerator SequenceAction (ActionData act)
+	private IEnumerator SequenceAction (enumActionPlayer type, Vector2 vec)
 	{
-		switch (act.type) {
-		case ActionData.enumActionType.MOVE:
-			var xr = _id.x + act.vec.x;
-			var yr = _id.y + act.vec.y;
+		switch (type) {
+		case enumActionPlayer.Move:
+			var xr = _id.x + vec.x;
+			var yr = _id.y + vec.y;
 
-			var cell = _map.GetListCell () [(int)xr] [(int)yr];
+			var prevCell = _map.GetListCells () [(int)_id.x] [(int)_id.y];
+			var cell = _map.GetListCells () [(int)xr] [(int)yr];
 
 			var pos = cell.transform.position;
 			transform.DOMove (pos, _duration);
-
+			cell.SetObj (gameObject);
+			prevCell.SetObj (null);
 			_id = cell.GetID ();
 			_prevPos = pos;
 
@@ -143,14 +143,17 @@ public class Player : MonoBehaviour
 			yield return new WaitForSeconds (_duration);
 			break;
 
-		case ActionData.enumActionType.ATTACK:
+		case enumActionPlayer.Attack:
 			_human.Attack ();
 			yield return new WaitForSeconds (_duration);
 			break;
 		}
-
-		_listActionLog.RemoveAt (0);
 		yield break;
+	}
+
+	private void CellChange ()
+	{
+		
 	}
 
 	//cellがActiveな所しか進めない + cellの配置されてない場所には進めない

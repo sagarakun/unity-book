@@ -7,7 +7,7 @@ public class Cell : MonoBehaviour
 	[SerializeField] private bool _isActive;
 	private GameObject _marker;
 	private Vector2 _id;
-	private Enemy _enemy;
+	private GameObject _obj;
 
 	private void Start ()
 	{
@@ -24,14 +24,14 @@ public class Cell : MonoBehaviour
 		return _id;
 	}
 
-	public Enemy GetEnemy ()
+	public GameObject GetObj ()
 	{
-		return _enemy;
+		return _obj;
 	}
 
-	public void SetEnemy (Enemy enemy)
+	public void SetObj (GameObject obj)
 	{
-		_enemy = enemy;
+		_obj = obj;
 	}
 
 	public void CreateCellData (Vector2 id)
