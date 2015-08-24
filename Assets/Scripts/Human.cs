@@ -4,34 +4,40 @@ using DG.Tweening;
 
 public class Human : MonoBehaviour
 {
-	/* - - - - - - - - - - - - - */
 	private Animator _animator;
 	private int _hushAttack;
 	private int _hushRunL;
 	private int _hushRunR;
 	private int _hushDamage;
+	private int _hushDead;
+
 	private ParticleSystem _dashFX;
 	private ParticleSystem _attackFX;
+	private ParticleSystem _deadFX;
 	private float _duration;
-
-	/* - - - - - - - - - - - - - */
 
 	public void SetDuration (float duration)
 	{
 		_duration = duration;
 	}
 
+	public void Dead ()
+	{
+		_animator.SetBool (_hushDead, true);
+		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnDead);
+	}
+
 	public void Damage ()
 	{
 		_attackFX.Play ();
 		_animator.SetBool (_hushDamage, true);
-		transform.DOLocalJump (new Vector3 (0, 0, -4), _duration, 1, _duration).OnComplete (OnJump);
+		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
 	}
 
 	public void Attack ()
 	{
 		_animator.SetBool (_hushAttack, true);
-		transform.DOLocalJump (new Vector3 (0, 0, 4), _duration, 1, _duration).OnComplete (OnJump);
+		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
 	}
 
 	public void RunR (float duration)
@@ -63,9 +69,11 @@ public class Human : MonoBehaviour
 		_hushRunL = Animator.StringToHash ("IsRunL");
 		_hushRunR = Animator.StringToHash ("IsRunR");
 		_hushDamage = Animator.StringToHash ("IsDamage");
+		_hushDead = Animator.StringToHash ("IsDead");
 
 		_dashFX = transform.parent.Find ("DashFX").GetComponent<ParticleSystem> ();
 		_attackFX = transform.parent.Find ("AttackFX").GetComponent<ParticleSystem> ();
+		_deadFX = transform.parent.Find ("DeadFX").GetComponent<ParticleSystem> ();
 
 		_dashFX.Stop ();
 		_attackFX.Stop ();
@@ -83,7 +91,16 @@ public class Human : MonoBehaviour
 		_animator.SetBool (_hushDamage, false);
 	}
 
-	private void OnAttackFX ()
+	private void OnAttackFXStart ()
 	{
+	}
+
+	private void OnAttackFXFinish ()
+	{
+	}
+
+	private void OnDead ()
+	{
+		_deadFX.Play ();
 	}
 }

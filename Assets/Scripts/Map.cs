@@ -4,31 +4,22 @@ using System.Collections.Generic;
 
 public class Map : MonoBehaviour
 {
-	/* - - - - - - - - - - - - - */
 	[SerializeField] private Player _player;
 	[SerializeField] private GameObject _prefabEnemy;
 	[SerializeField] private Vector2 _depth;
 	[SerializeField] private float _duration;
-	[SerializeField] private int _numberOfEnemy;
+	[SerializeField] private int _numberOfEnemyMax;
+	[SerializeField] private int _numberOfEnemyMin;
 
 	private int _margin;
 	private int _width;
 	private bool _isTurning;
-
 	private Transform _activeRoom;
+	private Transform _prevRoom;
 	private List<Transform> _listRoom;
 	private List<List<Cell>> _listCells;
 	private List<Cell> _listActiveCells;
 	private List<Enemy> _listEnemy;
-
-	/* - - - - - - - - - - - - - */
-
-	public List<List<Cell>> GetListCells ()
-	{
-		return this._listCells;
-	}
-
-	/* - - - - - - - - - - - - - */
 
 	private void Start ()
 	{		
@@ -40,20 +31,22 @@ public class Map : MonoBehaviour
 	{
 		_width = 48;
 		_margin = 4;
-		yield return StartCoroutine (_player.SequenceSetPropaty (_duration, _margin));
+		_listEnemy = new List<Enemy> ();
+		_listRoom = new List<Transform> ();
+		_listCells = new List<List<Cell>> ();
+		_player.SetDuration (_duration);
+
 		yield return StartCoroutine (SequenceSearchRoom ());
 		yield return StartCoroutine (SequenceCreateCell ());
 		yield return StartCoroutine (SequenceInitActiveCell ());
-		yield return StartCoroutine (SequenceCreateEnemy ());
-		yield return StartCoroutine (SequenceChangeActiveRoom ());
-		yield return StartCoroutine (SequenceShowActiveEnemy ());
+		yield return StartCoroutine (SequenceSearchActiveRoom ());
+		yield return StartCoroutine (SequenceShowActiveRoom ());
 		yield break;
 	}
 
 	//Room用GameObjectの走査
 	private IEnumerator SequenceSearchRoom ()
 	{
-		_listRoom = new List<Transform> ();
 		foreach (Transform child in transform) {
 			if (child.tag == "Room") {
 				var c = child;
@@ -67,43 +60,35 @@ public class Map : MonoBehaviour
 	//cellを配置
 	private IEnumerator SequenceCreateCell ()
 	{
-		_listCells = new List<List<Cell>> ();
-
-		var limitU = ((_width * 2) / _margin) + 1;
-		var limitX = limitU * _depth.x;
-		var limitZ = limitU * _depth.y;
-
-		for (int i = 0; i < limitX; i++) {
-
-			var listC = new List<Cell> ();
-
-			for (int j = 0; j < limitZ; j++) {
-
-				var objC = new GameObject ();
-				var col = objC.AddComponent<BoxCollider> ();
-				col.isTrigger = true;
-				var cell = objC.AddComponent<Cell> ();
-				objC.transform.SetParent (transform);
-
+		var u = ((_width * 2) / _margin) + 1;
+		var lx = u * _depth.x;
+		var ly = u * _depth.y;
+		for (int i = 0; i < lx; i++) {
+			var list = new List<Cell> ();
+			for (int j = 0; j < ly; j++) {
 				var x = -_width + (i * _margin);
 				var z = -_width + (j * _margin);
-
-				objC.transform.position = new Vector3 (x, 0, z);
+				var o = new GameObject ();
+				o.transform.SetParent (transform);
+				o.transform.position = new Vector3 (x, 0, z);
+				var c = o.AddComponent<BoxCollider> ();
+				c.isTrigger = true;
+				var cell = o.AddComponent<Cell> ();
 				cell.CreateCellData (new Vector2 ((x / _margin) + 12, (z / _margin) + 12));
-				listC.Add (cell);
+				list.Add (cell);
 			}
-			_listCells.Add (listC);
+			_listCells.Add (list);
 		}
+		_player.SetListCells (_listCells);
 		yield break;
 	}
 
-	//ActiveなCellのみを抽出
+	//ActiveなCellのみを抽出してListに保存
 	private IEnumerator SequenceInitActiveCell ()
 	{
 		_listActiveCells = new List<Cell> ();
 		for (int i = 0; i < _listCells.Count; i++) {
 			var list = _listCells [i];
-
 			for (int j = 0; j < list.Count; j++) {
 				var cell = _listCells [i] [j];
 				cell.DestroyMaker ();
@@ -113,108 +98,144 @@ public class Map : MonoBehaviour
 		}
 		yield break;
 	}
+		
+	//ActiveなRoom
+	private IEnumerator SequenceShowActiveRoom ()
+	{
+		if (_prevRoom != _activeRoom) {
+			yield return StartCoroutine (SequenceInitEnemy ());
+			for (int j = 0; j < _listRoom.Count; j++) {
+				var room = _listRoom [j];
+				if (room != _activeRoom) {
+					room.gameObject.SetActive (false);
+				} else {
+					room.gameObject.SetActive (true);
+					yield return StartCoroutine (SequenceCreateEnemy ());
+					_prevRoom = _activeRoom;
+				}
+			}
+		}
+		yield break;
+	}
 
-	//敵を_numberOfEnemy個分生成する
+	//roomがアクティブになったら前のroomの敵は全て消す
+	private IEnumerator SequenceInitEnemy ()
+	{
+		int z = 0;
+		if (_listEnemy.Count == z)
+			yield break;
+		else {
+			while (_listEnemy.Count > z) {
+				Enemy e = _listEnemy [z];
+				Destroy (e);
+				_listEnemy.RemoveAt (z);
+			}
+			yield break;
+		}
+	}
+
+	//敵を最小_numberOfEnemyMin体、最大_numberOfEnemyMax体生成する
 	private IEnumerator SequenceCreateEnemy ()
 	{
-		_listEnemy = new List<Enemy> ();
-		int count = 0;
+		var max = Random.Range (_numberOfEnemyMin, _numberOfEnemyMax);
 
-		while (count <= _numberOfEnemy) {
-			var rand = Random.Range (0, _listActiveCells.Count);
-			var cell = _listActiveCells [rand];
+		for (int i = 0; i < max; i++) {
+			var list = GetRoomCell (_activeRoom);
+			var rand = Random.Range (0, list.Count);
+			var cell = list [rand];
 
 			//場所被りしないようにcellの持ってるenemy判定
 			if (cell.GetObj () == null) {
-				GameObject obj = Instantiate (_prefabEnemy);
-
-				var enemy = obj.GetComponent<Enemy> ();
-				enemy.SetPropaty (_duration, _margin);
-
-				enemy.transform.SetParent (transform);
-				enemy.transform.position = cell.transform.position;
-				enemy.SetPlayer (_player);
-				enemy.SetListCells (_listCells);
-
-				for (int i = 0; i < _listRoom.Count; i++) {
-					var room = _listRoom [i];
-					if (IsActiveRoom (room, enemy.transform))
-						enemy.SetRoom (room);
+				if (IsActiveRoom (_activeRoom, cell.transform)) {
+					GameObject obj = Instantiate (_prefabEnemy);
+					var enemy = obj.GetComponent<Enemy> ();
+					enemy.transform.SetParent (transform);
+					enemy.SetDuration (_duration);
+					enemy.SetPlayer (_player);
+					enemy.SetListCells (_listCells);
+					enemy.SetID (cell);
+					enemy.transform.position = cell.transform.position;
+					_listEnemy.Add (enemy);
 				}
-
-				cell.SetObj (obj);
-				enemy.SetID (cell.GetID ());
-
-				_listEnemy.Add (enemy);
-				count++;
 			}
 		}
-
 		yield break;
 	}
 
-	//ActiveなRoomのみ表示する
-	private IEnumerator SequenceChangeActiveRoom ()
+	private List<Cell> GetRoomCell (Transform room)
 	{
-		for (int j = 0; j < _listRoom.Count; j++) {
-			var room = _listRoom [j];
-			if (room != _activeRoom) {
-				room.gameObject.SetActive (false);
-			} else {
-				room.gameObject.SetActive (true);
+		var l = new List<Cell> (); 
+		for (int i = 0; i < _listActiveCells.Count; i++) {
+			var cell = _listActiveCells [i];
+			if (IsActiveRoom (room, cell.transform)) {
+				l.Add (cell);
 			}
 		}
-		yield break;
+		return l;
 	}
-
 
 	private void Update ()
 	{
-		if (_isTurning) {
+		if (_isTurning)
 			return;
-		} else if (Input.GetKey (KeyCode.UpArrow)) {//上入力
-			StartCoroutine (SequenceInput (0, 1));
-		} else if (Input.GetKey (KeyCode.DownArrow)) {//下入力
-			StartCoroutine (SequenceInput (0, -1));
-		} else if (Input.GetKey (KeyCode.RightArrow)) {//右入力
-			StartCoroutine (SequenceInput (1, 0));
-		} else if (Input.GetKey (KeyCode.LeftArrow)) {//左入力
-			StartCoroutine (SequenceInput (-1, 0));
-		}
+		else if (Input.GetKey (KeyCode.UpArrow)) //上入力
+			StartCoroutine (SequenceInput (new Vector2 (0, 1)));
+		else if (Input.GetKey (KeyCode.DownArrow)) //下入力
+			StartCoroutine (SequenceInput (new Vector2 (0, -1)));
+		else if (Input.GetKey (KeyCode.RightArrow)) //右入力
+			StartCoroutine (SequenceInput (new Vector2 (1, 0)));
+		else if (Input.GetKey (KeyCode.LeftArrow)) //左入力
+			StartCoroutine (SequenceInput (new Vector2 (-1, 0)));
 	}
 
 	//ユーザー入力シーケンス
-	private IEnumerator SequenceInput (int x, int z)
+	private IEnumerator SequenceInput (Vector2 vec)
 	{
 		_isTurning = true;
-		yield return StartCoroutine (_player.SequenceInputAction (x, z));
+		yield return StartCoroutine (SequencePLayerTurn (vec));
+		yield return new WaitForFixedUpdate ();
 		yield return StartCoroutine (SequenceSearchActiveRoom ());
-		yield return StartCoroutine (SequenceShowActiveEnemy ());
+		yield return StartCoroutine (SequenceShowActiveRoom ());
+		yield return StartCoroutine (SequenceEnemyReactionTurn ());
+		yield return new WaitForFixedUpdate ();
 		yield return StartCoroutine (SequenceEnemyTurn ());
+		yield return new WaitForFixedUpdate ();
+		yield return StartCoroutine (SequencePlayerReactionTurn ());
 		_isTurning = false;
 		yield break;
 	}
-		
+
+	private IEnumerator SequencePLayerTurn (Vector2 vec)
+	{
+		_player.SetInputID (vec);
+		_player.TurnAction ();
+
+		yield break;
+	}
+
 	//ActiveなRoomを調べる
 	private IEnumerator SequenceSearchActiveRoom ()
 	{
 		for (int i = 0; i < _listRoom.Count; i++) {
-			var room = _listRoom [i];
-			if (IsActiveRoom (room, _player.transform))
-				_activeRoom = room;
+			var r = _listRoom [i];
+			var c = _listCells [(int)_player.GetID ().x] [(int)_player.GetID ().y];
+			if (IsActiveRoom (r, c.transform))
+				_activeRoom = r;
 		}
 		yield break;
 	}
 
-	//ActiveなRoomにいる敵だけを表示
-	private IEnumerator SequenceShowActiveEnemy ()
+	//敵のリアクションターン
+	private IEnumerator SequenceEnemyReactionTurn ()
 	{
-		yield return StartCoroutine (SequenceChangeActiveRoom ());
-
 		for (int i = 0; i < _listEnemy.Count; i++) {
 			var e = _listEnemy [i];
-			e.Show (_activeRoom);
+			if (e == null)
+				_listEnemy.RemoveAt (i);
+			else
+				e.TurnReaction ();
 		}
+
 		yield break;
 	}
 
@@ -223,9 +244,17 @@ public class Map : MonoBehaviour
 	{
 		for (int i = 0; i < _listEnemy.Count; i++) {
 			var e = _listEnemy [i];
-			if (e.gameObject.activeSelf)
-				e.TurnAction ();
+			e.TurnAction ();
 		}
+
+		yield break;
+	}
+
+	//プレイヤーのリアクションターン
+	private IEnumerator SequencePlayerReactionTurn ()
+	{
+		_player.TurnReaction ();
+
 		yield break;
 	}
 

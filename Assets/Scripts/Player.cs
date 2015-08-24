@@ -3,134 +3,67 @@ using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 
-public class Player : MonoBehaviour
+public class Player : Character
 {
+	[SerializeField] private PlayerCamera _camera;
+	private Vector2 _inputID;
 	/* - - - - - - - - - - - - - */
 
-	[SerializeField] private Map _map;
-	private float _duration;
-	private Human _human;
-	private Vector2 _id;
-	private Vector3 _prevPos;
-	private int _margin;
-	private bool _isRight;
-
-	private enum enumVectorPlayer
+	public void SetInputID (Vector2 id)
 	{
-		Front,
-		Back,
-		Right,
-		Left
-	}
-
-	private enum enumActionPlayer
-	{
-		Attack,
-		Move,
-		Damage,
-	}
-
-	/* - - - - - - - - - - - - - */
-
-	public Vector2 GetID ()
-	{
-		return _id;
-	}
-
-	public void Damage ()
-	{
-		_human.Damage ();
-	}
-
-	/* - - - - - - - - - - - - - */
-
-	private void Awake ()
-	{
-		StartCoroutine (SequenceInit ());
-	}
-
-	private IEnumerator SequenceInit ()
-	{
-		DOTween.Init ();
-		_isRight = false;
-		_human = transform.Find ("human").GetComponent<Human> ();
-		yield break;
+		_inputID = id;
 	}
 
 	private void OnTriggerEnter (Collider other)
 	{
 		var cell = other.gameObject.GetComponent<Cell> ();
 		if (cell != null) {
-			_id = cell.GetID ();
+			SetID (cell);
 			var pos = cell.transform.position;
 			transform.position = pos;
-			_prevPos = pos;
 		}
 	}
 
-	/* - - - - - - - - - - - - - */
-
-	public IEnumerator SequenceSetPropaty (float duration, int margin)
+	public override void TurnReaction ()
 	{
-		_duration = duration;
-		_margin = margin;
-		_human.SetDuration (_duration);
-		yield break;
+		BranchDamage ();
 	}
 
-	//アクションのログをとる
-	public IEnumerator SequenceInputAction (int x, int z)
+	public override void TurnAction ()
 	{
-		//キャラの方向変更
-		var dur = _duration / 2.0f;
-		if (x == 1)
-			transform.DOLocalRotate (new Vector3 (0, 90, 0), dur);
-		else if (x == -1)
-			transform.DOLocalRotate (new Vector3 (0, -90, 0), dur);
-		else if (z == 1)
-			transform.DOLocalRotate (new Vector3 (0, 0, 0), dur);
-		else if (z == -1)
-			transform.DOLocalRotate (new Vector3 (0, 180, 0), dur);
+		_isDamage = false;
 
-		var vec = new Vector2 (x, z);
-		var xr = _id.x + vec.x;
-		var yr = _id.y + vec.y;
-		var cell = _map.GetListCells () [(int)xr] [(int)yr];
+		if (_inputID.x == 1)
+			Rotation (enumRotType.Right);
+		else if (_inputID.x == -1)
+			Rotation (enumRotType.Left);
+		else if (_inputID.y == 1)
+			Rotation (enumRotType.Front);
+		else if (_inputID.y == -1)
+			Rotation (enumRotType.Back);
 
-		if (!IsCellActive (cell))
-			yield break;
+		var xr = _id.x + _inputID.x;
+		var yr = _id.y + _inputID.y;
+		var cell = _listCells [(int)xr] [(int)yr];
 
-		enumActionPlayer type; 
-		if (cell.GetObj () != null) {//敵のいるcellに進もうとした場合			
-			type = enumActionPlayer.Attack;
+		if (!cell.GetIsActive ())
+			return;
+		
+		enumAction e; 
+		//敵のいるcellに進もうとした場合	
+		if (cell.GetObj ()) {
 			var enemy = cell.GetObj ().GetComponent<Enemy> ();
 			enemy.Damage (_id);
-		} else {//何も無いcellに進もうとした場合
-			type = enumActionPlayer.Move;
+			e = enumAction.Attack;
+		} else {
+			//何も無いcellに進もうとした場合
+			e = enumAction.Move;
 		}
 
-		yield return StartCoroutine (SequenceAction (type, vec));
-
-		yield break;
-	}
-
-	//アクションを実行
-	private IEnumerator SequenceAction (enumActionPlayer type, Vector2 vec)
-	{
-		switch (type) {
-		case enumActionPlayer.Move:
-			var xr = _id.x + vec.x;
-			var yr = _id.y + vec.y;
-
-			var prevCell = _map.GetListCells () [(int)_id.x] [(int)_id.y];
-			var cell = _map.GetListCells () [(int)xr] [(int)yr];
-
-			var pos = cell.transform.position;
-			transform.DOMove (pos, _duration);
-			cell.SetObj (gameObject);
-			prevCell.SetObj (null);
-			_id = cell.GetID ();
-			_prevPos = pos;
+		switch (e) {
+		case enumAction.Move:
+			Move (cell.GetID ());
+			_camera.Move (cell.transform.position, _duration);
 
 			if (_isRight) {
 				_human.RunR (_duration);
@@ -139,32 +72,13 @@ public class Player : MonoBehaviour
 				_human.RunL (_duration);
 				_isRight = true;
 			}
-
-			yield return new WaitForSeconds (_duration);
 			break;
 
-		case enumActionPlayer.Attack:
+		case enumAction.Attack:
 			_human.Attack ();
-			yield return new WaitForSeconds (_duration);
 			break;
 		}
-		yield break;
 	}
-
-	private void CellChange ()
-	{
 		
-	}
 
-	//cellがActiveな所しか進めない + cellの配置されてない場所には進めない
-	private bool IsCellActive (Cell cell)
-	{
-		if (cell == null)
-			return false;
-
-		if (!cell.GetIsActive ())
-			return false;
-		else
-			return true;
-	}
 }

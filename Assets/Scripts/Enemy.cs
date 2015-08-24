@@ -3,156 +3,143 @@ using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 
-public class Enemy : MonoBehaviour
+public class Enemy : Character
 {
-	/* - - - - - - - - - - - - - */
-	private List<List<Cell>> _listCells;
-	private float _duration;
-	private Human _human;
-	private Vector2 _id;
-	private Vector3 _prevPos;
-	private int _margin;
-	private bool _isRight;
-	private Transform _room;
 	private Player _player;
-	private List<AStarLog> _listAStar;
-
-	public void SetPropaty (float duration, int margin)
-	{
-		_duration = duration;
-		_margin = margin;
-		_human.SetDuration (_duration);
-	}
-
-	public void SetRoom (Transform room)
-	{
-		_room = room;
-	}
-
-	public void Show (Transform room)
-	{
-		if (_room == room)
-			transform.gameObject.SetActive (true);
-		else
-			transform.gameObject.SetActive (false);
-	}
-
-	public void SetID (Vector2 vec)
-	{
-		_id = vec;
-	}
 
 	public void SetPlayer (Player player)
 	{
 		_player = player;
 	}
 
-	public void SetListCells (List<List<Cell>> listCells)
+	protected override IEnumerator SequenceDead ()
 	{
-		_listCells = listCells;
-	}
-
-	public void Damage (Vector2 id)
-	{
-		var l = new Vector2 (_id.x + 1, _id.y);
-		var r = new Vector2 (_id.x - 1, _id.y);
-		var f = new Vector2 (_id.x, _id.y + 1);
-		var b = new Vector2 (_id.x, _id.y - 1);
-		var dur = _duration / 2.0f;
-
-		if (id == l) {
-			transform.DOLocalRotate (new Vector3 (0, 90, 0), dur);
-			_human.Damage ();
-		} else if (id == r) {
-			transform.DOLocalRotate (new Vector3 (0, -90, 0), dur);
-			_human.Damage ();
-		} else if (id == f) {
-			transform.DOLocalRotate (new Vector3 (0, 0, 0), dur);
-			_human.Damage ();
-		} else if (id == b) {
-			transform.DOLocalRotate (new Vector3 (0, 180, 0), dur);
-			_human.Damage ();
-		}
-	}
-
-	private void Awake ()
-	{
-		_listAStar = new List<AStarLog> ();
-		StartCoroutine (SequenceInit ());
-	}
-
-	private IEnumerator SequenceInit ()
-	{
-		DOTween.Init ();
-		_isRight = false;
-		_human = transform.Find ("human").GetComponent<Human> ();
+		_player = null;
+		yield return StartCoroutine (base.SequenceDead ());
 		yield break;
 	}
 
-	public void TurnAction ()
+	protected override void Move (Vector2 id)
 	{
-		_human.Attack ();
-		StartCoroutine (SequenceAction ());
+		base.Move (id);
+
+		if (_isRight) {
+			_human.RunR (_duration);
+			_isRight = false;
+		} else {
+			_human.RunL (_duration);
+			_isRight = true;
+		}
 	}
 
-	private IEnumerator SequenceAction ()
+	public override void TurnReaction ()
 	{
-		if (_listAStar.Count > 0) {
-			for (int i = 0; i < _listAStar.Count; i++) {
-				var a = _listAStar [0];
-				Destroy (a);
-				_listAStar.RemoveAt (0);
+		BranchDamage ();	
+	}
+
+	public override void TurnAction ()
+	{
+		if (_isDamage)
+			_isDamage = false;
+		else
+			BranchNoDamage ();
+	}
+
+	private void BranchNoDamage ()
+	{
+		var f = GetMovePoint (_id, enumRotType.Front);
+		var b = GetMovePoint (_id, enumRotType.Back);
+		var l = GetMovePoint (_id, enumRotType.Left);
+		var r = GetMovePoint (_id, enumRotType.Right);
+
+		var route = GetShortRoute (f, b, l, r);
+
+		switch (route) {
+		case enumRotType.Front:
+			ActionMove (f, route, l, enumRotType.Left, r, enumRotType.Right);
+			break;
+		case enumRotType.Back:
+			ActionMove (b, route, l, enumRotType.Left, r, enumRotType.Right);
+			break;
+		case enumRotType.Left:
+			ActionMove (l, route, f, enumRotType.Front, b, enumRotType.Back);
+			break;
+		case enumRotType.Right:
+			ActionMove (r, route, f, enumRotType.Front, b, enumRotType.Back);
+			break;
+		}
+	}
+
+	private void ActionMove (Vector2 t, enumRotType te, Vector2 tA, enumRotType teA, Vector2 tB, enumRotType teB)
+	{
+		if (CellCheck (t))
+			Action (t, te);
+		else {
+			var e = GetShortRoute2nd (tA, tB, teA, teB);
+			if (e == teA) {
+				if (CellCheck (tA))
+					Action (tA, teA);
+				else if (CellCheck (tB))
+					Action (tB, teB);
+			} else if (e == teB) {
+				if (CellCheck (tB))
+					Action (tB, teB);
+				else if (CellCheck (tA))
+					Action (tA, teA);
 			}
 		}
-
-		var list = GetListAStarLog (_id);
-		//openしたastarから進行方向を算出
-
-		yield break;
 	}
 
-	private void MoveCalculation (List<AStarLog> list)
+	private enumRotType GetShortRoute (Vector2 f, Vector2 b, Vector2 l, Vector2 r)
 	{
-		
+		var type = enumRotType.Front;
+
+		var id = _player.GetID ();
+		var dF = Vector2.Distance (id, f);
+		var dB = Vector2.Distance (id, b);
+		var dL = Vector2.Distance (id, l);
+		var dR = Vector2.Distance (id, r);
+
+		if (dF <= dB && dF <= dL && dF <= dR)
+			type = enumRotType.Front;
+		else if (dB <= dF && dB <= dL && dB <= dR)
+			type = enumRotType.Back;
+		else if (dL <= dF && dL <= dB && dL <= dR)
+			type = enumRotType.Left;
+		else if (dR <= dF && dR <= dB && dR <= dL)
+			type = enumRotType.Right;
+		return type;
 	}
 
-	private List<AStarLog> GetListAStarLog (Vector2 vec)
+	private enumRotType GetShortRoute2nd (Vector2 vA, Vector2 vB, enumRotType eA, enumRotType eB)
 	{
-		var basic = GetAstar (vec, 0);
-		var left = GetAstar (new Vector2 (vec.x - 1, vec.y), 1);
-		var right = GetAstar (new Vector2 (vec.x + 1, vec.y), 1);
-		var front = GetAstar (new Vector2 (vec.x, vec.y + 1), 1);
-		var back = GetAstar (new Vector2 (vec.x, vec.y - 1), 1);
+		var type = enumRotType.Front;
 
-		var list = new List<AStarLog> ();
-		return list;
+		var id = _player.GetID ();
+		var dF = Vector2.Distance (id, vA);
+		var dB = Vector2.Distance (id, vB);
+
+		if (dF <= dB)
+			type = eA;
+		else if (dB <= dF)
+			type = eB;
+		return type;
 	}
 
-	private AStarLog GetAstar (Vector2 vec, int num)
+	private void Action (Vector2 vec, enumRotType rot)
 	{
-		var cell = _listCells [(int)vec.x] [(int)vec.y];
-		if (cell.GetIsActive ()) {
-			var astar = CostCalculation (num, _player.GetID (), cell.GetID ());
-			return astar;
-		} else
-			return null;
-	}
+		Rotation (rot);
 
-	private AStarLog CostCalculation (int num, Vector2 goal, Vector2 start)
-	{
-		AStarLog astar = ScriptableObject.CreateInstance<AStarLog> ();
-		var dx = goal.x - start.x;
-		var dy = goal.y - start.y;
-
-		var h = dx + dy; 
-		var c = num;
-		var s = c + h;
-
-		astar.hCost = (int)h;
-		astar.cost = (int)c;
-		astar.score = (int)s;
-		astar.id = start;
-
-		return astar;
+		var id = _player.GetID ();
+		var f = GetMovePoint (id, enumRotType.Front);
+		var b = GetMovePoint (id, enumRotType.Back);
+		var l = GetMovePoint (id, enumRotType.Left);
+		var r = GetMovePoint (id, enumRotType.Right);
+		if (_id == f || _id == b || _id == l || _id == r) {
+			_human.Attack ();
+			_player.Damage (_id);
+		} else {
+			Move (vec);
+		}
 	}
 }

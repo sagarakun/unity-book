@@ -182,7 +182,14 @@ ModelImporter:
       curves: []
       events:
       - time: .765536785
-        functionName: OnAttackFX
+        functionName: OnAttackFXFinish
+        data: 
+        objectReferenceParameter: {instanceID: 0}
+        floatParameter: 0
+        intParameter: 0
+        messageOptions: 0
+      - time: 0
+        functionName: OnAttackFXStart
         data: 
         objectReferenceParameter: {instanceID: 0}
         floatParameter: 0
