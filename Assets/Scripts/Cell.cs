@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
-using DG.Tweening;
+
 
 public class Cell : MonoBehaviour
 {
@@ -9,11 +8,9 @@ public class Cell : MonoBehaviour
 	private Vector2 _id;
 	private GameObject _obj;
 
-	private void Start ()
-	{
-		DOTween.Init ();
-	}
-
+	/// <summary>
+	/// このCellがActiveかどうかをboolで返します
+	/// </summary>
 	public bool GetIsActive ()
 	{
 		return _isActive;
@@ -29,6 +26,10 @@ public class Cell : MonoBehaviour
 		return _obj;
 	}
 
+	/// <summary>
+	/// Sets the object.
+	/// </summary>
+	/// <param name="obj">GameObject.</param>
 	public void SetObj (GameObject obj)
 	{
 		_obj = obj;
@@ -40,12 +41,13 @@ public class Cell : MonoBehaviour
 		_marker = GameObject.CreatePrimitive (PrimitiveType.Cube);
 		_marker.transform.SetParent (transform);
 		_marker.transform.localPosition = new Vector3 (0, 0, 0);
-		_marker.transform.localScale = Vector3.zero;
+		//_marker.transform.localScale = Vector3.zero;
 	}
 
 	public void DestroyMaker ()
 	{
-		Destroy (_marker);
+		if (!_isActive)
+			Destroy (_marker);
 	}
 
 	public void OnTriggerEnter (Collider other)

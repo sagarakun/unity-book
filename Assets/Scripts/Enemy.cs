@@ -32,20 +32,25 @@ public class Enemy : Character
 		}
 	}
 
-	public override void TurnReaction ()
-	{
-		BranchDamage ();	
-	}
-
 	public override void TurnAction ()
 	{
 		if (_isDamage)
 			_isDamage = false;
-		else
-			BranchNoDamage ();
+
+		if (!_isDead)
+			BranchAction ();
 	}
 
-	private void BranchNoDamage ()
+	public override void TurnReaction ()
+	{
+		if (_HP <= 0)
+			StartCoroutine (SequenceDead ());
+
+		if (!_isDead)
+			BranchReaction ();
+	}
+
+	private void BranchAction ()
 	{
 		var f = GetMovePoint (_id, enumRotType.Front);
 		var b = GetMovePoint (_id, enumRotType.Back);
@@ -93,7 +98,6 @@ public class Enemy : Character
 	private enumRotType GetShortRoute (Vector2 f, Vector2 b, Vector2 l, Vector2 r)
 	{
 		var type = enumRotType.Front;
-
 		var id = _player.GetID ();
 		var dF = Vector2.Distance (id, f);
 		var dB = Vector2.Distance (id, b);
@@ -114,7 +118,6 @@ public class Enemy : Character
 	private enumRotType GetShortRoute2nd (Vector2 vA, Vector2 vB, enumRotType eA, enumRotType eB)
 	{
 		var type = enumRotType.Front;
-
 		var id = _player.GetID ();
 		var dF = Vector2.Distance (id, vA);
 		var dB = Vector2.Distance (id, vB);
@@ -137,7 +140,7 @@ public class Enemy : Character
 		var r = GetMovePoint (id, enumRotType.Right);
 		if (_id == f || _id == b || _id == l || _id == r) {
 			_human.Attack ();
-			_player.Damage (_id);
+			_player.Damage (_ATK, _id);
 		} else {
 			Move (vec);
 		}

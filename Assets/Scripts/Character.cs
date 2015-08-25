@@ -6,6 +6,7 @@ using DG.Tweening;
 public class Character : MonoBehaviour
 {
 	[SerializeField] protected int _HP;
+	[SerializeField] protected int _ATK;
 	protected float _duration;
 	protected Human _human;
 	protected List<List<Cell>> _listCells;
@@ -13,6 +14,8 @@ public class Character : MonoBehaviour
 	protected bool _isRight;
 	protected Vector2 _damegeRot;
 	protected bool _isDamage;
+	protected int _index;
+	protected bool _isDead;
 
 	protected enum enumRotType
 	{
@@ -51,12 +54,11 @@ public class Character : MonoBehaviour
 		StartCoroutine (SequenceInit ());
 	}
 
-	protected virtual void BranchDamage ()
+	protected virtual void BranchReaction ()
 	{
-		if (_HP <= 0) {
+		if (_HP <= 0)
 			StartCoroutine (SequenceDead ());
-		} else if (_isDamage) {
-			
+		else if (_isDamage) {
 			_human.Damage ();
 			if (_damegeRot == GetMovePoint (_id, enumRotType.Left)) {
 				ActionDamage (enumRotType.Left);
@@ -70,10 +72,12 @@ public class Character : MonoBehaviour
 		}
 	}
 
-	public void SetDuration (float duration)
+	public void SetParameters (float duration, int index, List<List<Cell>> listCells)
 	{
 		_duration = duration;
 		_human.SetDuration (_duration);
+		_index = index;
+		_listCells = listCells;
 	}
 
 	public void SetID (Cell cell)
@@ -89,14 +93,14 @@ public class Character : MonoBehaviour
 		return _id;
 	}
 
-	public void SetListCells (List<List<Cell>> listCells)
+	public virtual void Damage (int atk, Vector2 id)
 	{
-		_listCells = listCells;
-	}
-
-	public virtual void Damage (Vector2 id)
-	{
-		_HP--;
+		_HP -= atk;
+		if (this is Player)
+			Debug.Log ("プレイヤーに" + atk + "のダメージ");
+		else
+			Debug.Log ("敵" + _index + "に" + atk + "のダメージ");
+		
 		_damegeRot = id;
 		_isDamage = true;
 	}
@@ -121,6 +125,7 @@ public class Character : MonoBehaviour
 
 	protected virtual IEnumerator SequenceDead ()
 	{
+		_isDead = true;
 		_human.Dead ();
 		yield return new WaitForSeconds (_duration);
 		Destroy (this);
@@ -139,6 +144,9 @@ public class Character : MonoBehaviour
 	{
 		Rotation (rot);
 		Vector2 p = Vector2.zero;
+
+		if (_isDead)
+			return;
 
 		if (rot == enumRotType.Front) {
 			p = GetMovePoint (_id, enumRotType.Back);
@@ -173,7 +181,12 @@ public class Character : MonoBehaviour
 
 	protected bool CellCheck (Vector2 id)
 	{
+		if (_isDead)
+			return false;
 		var cell = _listCells [(int)id.x] [(int)id.y];
+		if (cell == null)
+			return false;
+		
 		if (cell.GetIsActive () && cell.GetObj () == null)
 			return true;
 		else

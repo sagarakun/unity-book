@@ -34,13 +34,12 @@ public class Map : MonoBehaviour
 		_listEnemy = new List<Enemy> ();
 		_listRoom = new List<Transform> ();
 		_listCells = new List<List<Cell>> ();
-		_player.SetDuration (_duration);
-
 		yield return StartCoroutine (SequenceSearchRoom ());
 		yield return StartCoroutine (SequenceCreateCell ());
 		yield return StartCoroutine (SequenceInitActiveCell ());
 		yield return StartCoroutine (SequenceSearchActiveRoom ());
 		yield return StartCoroutine (SequenceShowActiveRoom ());
+
 		yield break;
 	}
 
@@ -79,7 +78,7 @@ public class Map : MonoBehaviour
 			}
 			_listCells.Add (list);
 		}
-		_player.SetListCells (_listCells);
+		_player.SetParameters (_duration, 0, _listCells);
 		yield break;
 	}
 
@@ -150,9 +149,8 @@ public class Map : MonoBehaviour
 					GameObject obj = Instantiate (_prefabEnemy);
 					var enemy = obj.GetComponent<Enemy> ();
 					enemy.transform.SetParent (transform);
-					enemy.SetDuration (_duration);
+					enemy.SetParameters (_duration, i, _listCells);
 					enemy.SetPlayer (_player);
-					enemy.SetListCells (_listCells);
 					enemy.SetID (cell);
 					enemy.transform.position = cell.transform.position;
 					_listEnemy.Add (enemy);
@@ -199,8 +197,8 @@ public class Map : MonoBehaviour
 		yield return StartCoroutine (SequenceEnemyReactionTurn ());
 		yield return new WaitForFixedUpdate ();
 		yield return StartCoroutine (SequenceEnemyTurn ());
-		yield return new WaitForFixedUpdate ();
 		yield return StartCoroutine (SequencePlayerReactionTurn ());
+		yield return new WaitForFixedUpdate ();
 		_isTurning = false;
 		yield break;
 	}
@@ -254,7 +252,6 @@ public class Map : MonoBehaviour
 	private IEnumerator SequencePlayerReactionTurn ()
 	{
 		_player.TurnReaction ();
-
 		yield break;
 	}
 

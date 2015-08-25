@@ -7,7 +7,6 @@ public class Player : Character
 {
 	[SerializeField] private PlayerCamera _camera;
 	private Vector2 _inputID;
-	/* - - - - - - - - - - - - - */
 
 	public void SetInputID (Vector2 id)
 	{
@@ -26,7 +25,7 @@ public class Player : Character
 
 	public override void TurnReaction ()
 	{
-		BranchDamage ();
+		BranchReaction ();
 	}
 
 	public override void TurnAction ()
@@ -53,7 +52,7 @@ public class Player : Character
 		//敵のいるcellに進もうとした場合	
 		if (cell.GetObj ()) {
 			var enemy = cell.GetObj ().GetComponent<Enemy> ();
-			enemy.Damage (_id);
+			enemy.Damage (_ATK, _id);
 			e = enumAction.Attack;
 		} else {
 			//何も無いcellに進もうとした場合
