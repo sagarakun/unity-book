@@ -23,9 +23,12 @@ public class Player : Character
 		}
 	}
 
-	public override void TurnReaction ()
+	public void TurnReaction ()
 	{
-		BranchReaction ();
+		if (_isDead)
+			Dead ();
+		else if (_isDamage)
+			Reaction ();
 	}
 
 	public override void TurnAction ()
@@ -43,7 +46,8 @@ public class Player : Character
 
 		var xr = _id.x + _inputID.x;
 		var yr = _id.y + _inputID.y;
-		var cell = _listCells [(int)xr] [(int)yr];
+		var vec = new Vector2 (xr, yr);
+		var cell = GetCell (vec);
 
 		if (!cell.GetIsActive ())
 			return;

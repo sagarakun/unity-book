@@ -39,7 +39,6 @@ public class Map : MonoBehaviour
 		yield return StartCoroutine (SequenceInitActiveCell ());
 		yield return StartCoroutine (SequenceSearchActiveRoom ());
 		yield return StartCoroutine (SequenceShowActiveRoom ());
-
 		yield break;
 	}
 
@@ -102,13 +101,13 @@ public class Map : MonoBehaviour
 	private IEnumerator SequenceShowActiveRoom ()
 	{
 		if (_prevRoom != _activeRoom) {
-			yield return StartCoroutine (SequenceInitEnemy ());
 			for (int j = 0; j < _listRoom.Count; j++) {
 				var room = _listRoom [j];
 				if (room != _activeRoom) {
 					room.gameObject.SetActive (false);
 				} else {
 					room.gameObject.SetActive (true);
+					yield return StartCoroutine (SequenceInitEnemy ());
 					yield return StartCoroutine (SequenceCreateEnemy ());
 					_prevRoom = _activeRoom;
 				}
@@ -136,8 +135,8 @@ public class Map : MonoBehaviour
 	//敵を最小_numberOfEnemyMin体、最大_numberOfEnemyMax体生成する
 	private IEnumerator SequenceCreateEnemy ()
 	{
+		
 		var max = Random.Range (_numberOfEnemyMin, _numberOfEnemyMax);
-
 		for (int i = 0; i < max; i++) {
 			var list = GetRoomCell (_activeRoom);
 			var rand = Random.Range (0, list.Count);
@@ -190,24 +189,19 @@ public class Map : MonoBehaviour
 	private IEnumerator SequenceInput (Vector2 vec)
 	{
 		_isTurning = true;
-		yield return StartCoroutine (SequencePLayerTurn (vec));
-		yield return new WaitForSeconds(_duration/5.0f);
-		yield return StartCoroutine (SequenceEnemyReactionTurn ());
-		yield return new WaitForSeconds(_duration/5.0f);
-		yield return StartCoroutine (SequenceEnemyTurn ());
-		yield return new WaitForSeconds(_duration/5.0f);
-		yield return StartCoroutine (SequencePlayerReactionTurn ());
-		_isTurning = false;
-		yield break;
-	}
-
-	private IEnumerator SequencePLayerTurn (Vector2 vec)
-	{
+		var dur = _duration / 5.0f;
 		_player.SetInputID (vec);
 		_player.TurnAction ();
-		yield return new WaitForFixedUpdate ();
+		yield return new WaitForSeconds (dur);
 		yield return StartCoroutine (SequenceSearchActiveRoom ());
 		yield return StartCoroutine (SequenceShowActiveRoom ());
+		yield return StartCoroutine (SequenceEnemyTurn ());
+		yield return new WaitForSeconds (dur);
+		_player.TurnReaction ();
+		yield return new WaitForSeconds (dur);
+		yield return StartCoroutine (SequenceSearchActiveRoom ());
+		yield return StartCoroutine (SequenceShowActiveRoom ());
+		_isTurning = false;
 		yield break;
 	}
 
@@ -223,37 +217,16 @@ public class Map : MonoBehaviour
 		yield break;
 	}
 
-	//敵のリアクションターン
-	private IEnumerator SequenceEnemyReactionTurn ()
-	{
-		for (int i = 0; i < _listEnemy.Count; i++) {
-			var e = _listEnemy [i];
-			if (e == null)
-				_listEnemy.RemoveAt (i);
-			else
-				e.TurnReaction ();
-		}
-
-		yield break;
-	}
-
 	//敵の行動ターン
 	private IEnumerator SequenceEnemyTurn ()
 	{
 		for (int i = 0; i < _listEnemy.Count; i++) {
 			var e = _listEnemy [i];
+			if (e.IsDead ()) {
+				_listEnemy.RemoveAt (i);
+			}
 			e.TurnAction ();
 		}
-		yield break;
-	}
-
-	//プレイヤーのリアクションターン
-	private IEnumerator SequencePlayerReactionTurn ()
-	{
-		_player.TurnReaction ();
-		yield return new WaitForFixedUpdate ();
-		yield return StartCoroutine (SequenceSearchActiveRoom ());
-		yield return StartCoroutine (SequenceShowActiveRoom ());
 		yield break;
 	}
 
