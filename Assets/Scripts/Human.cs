@@ -23,12 +23,14 @@ public class Human : MonoBehaviour
 
 	public void Dead ()
 	{
+		transform.DOKill ();
 		_animator.SetBool (_hushDead, true);
 		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnDead);
 	}
 
 	public void Damage ()
 	{
+		transform.DOKill ();
 		_attackFX.Play ();
 		_animator.SetBool (_hushDamage, true);
 		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
@@ -36,12 +38,14 @@ public class Human : MonoBehaviour
 
 	public void Attack ()
 	{
+		transform.DOKill ();
 		_animator.SetBool (_hushAttack, true);
 		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
 	}
 
 	public void RunR (float duration)
 	{
+		transform.DOKill ();
 		_dashFX.Play ();
 		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
 		_animator.SetBool (_hushRunR, true);
@@ -49,6 +53,7 @@ public class Human : MonoBehaviour
 
 	public void RunL (float duration)
 	{
+		transform.DOKill ();
 		_dashFX.Play ();
 		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
 		_animator.SetBool (_hushRunL, true);

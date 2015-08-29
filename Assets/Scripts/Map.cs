@@ -191,14 +191,12 @@ public class Map : MonoBehaviour
 	{
 		_isTurning = true;
 		yield return StartCoroutine (SequencePLayerTurn (vec));
-		yield return new WaitForFixedUpdate ();
-		yield return StartCoroutine (SequenceSearchActiveRoom ());
-		yield return StartCoroutine (SequenceShowActiveRoom ());
+		yield return new WaitForSeconds(_duration/5.0f);
 		yield return StartCoroutine (SequenceEnemyReactionTurn ());
-		yield return new WaitForFixedUpdate ();
+		yield return new WaitForSeconds(_duration/5.0f);
 		yield return StartCoroutine (SequenceEnemyTurn ());
+		yield return new WaitForSeconds(_duration/5.0f);
 		yield return StartCoroutine (SequencePlayerReactionTurn ());
-		yield return new WaitForFixedUpdate ();
 		_isTurning = false;
 		yield break;
 	}
@@ -207,7 +205,9 @@ public class Map : MonoBehaviour
 	{
 		_player.SetInputID (vec);
 		_player.TurnAction ();
-
+		yield return new WaitForFixedUpdate ();
+		yield return StartCoroutine (SequenceSearchActiveRoom ());
+		yield return StartCoroutine (SequenceShowActiveRoom ());
 		yield break;
 	}
 
@@ -244,7 +244,6 @@ public class Map : MonoBehaviour
 			var e = _listEnemy [i];
 			e.TurnAction ();
 		}
-
 		yield break;
 	}
 
@@ -252,6 +251,9 @@ public class Map : MonoBehaviour
 	private IEnumerator SequencePlayerReactionTurn ()
 	{
 		_player.TurnReaction ();
+		yield return new WaitForFixedUpdate ();
+		yield return StartCoroutine (SequenceSearchActiveRoom ());
+		yield return StartCoroutine (SequenceShowActiveRoom ());
 		yield break;
 	}
 

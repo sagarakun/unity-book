@@ -6,6 +6,7 @@ using DG.Tweening;
 public class Enemy : Character
 {
 	private Player _player;
+	private Vector2 _pId;
 
 	public void SetPlayer (Player player)
 	{
@@ -52,26 +53,31 @@ public class Enemy : Character
 
 	private void BranchAction ()
 	{
-		var f = GetMovePoint (_id, enumRotType.Front);
-		var b = GetMovePoint (_id, enumRotType.Back);
-		var l = GetMovePoint (_id, enumRotType.Left);
-		var r = GetMovePoint (_id, enumRotType.Right);
+		if (_pId == _player.GetID ()) {
+			Attack ();
+		} else {
 
-		var route = GetShortRoute (f, b, l, r);
+			var f = GetMovePoint (_id, enumRotType.Front);
+			var b = GetMovePoint (_id, enumRotType.Back);
+			var l = GetMovePoint (_id, enumRotType.Left);
+			var r = GetMovePoint (_id, enumRotType.Right);
 
-		switch (route) {
-		case enumRotType.Front:
-			ActionMove (f, route, l, enumRotType.Left, r, enumRotType.Right);
-			break;
-		case enumRotType.Back:
-			ActionMove (b, route, l, enumRotType.Left, r, enumRotType.Right);
-			break;
-		case enumRotType.Left:
-			ActionMove (l, route, f, enumRotType.Front, b, enumRotType.Back);
-			break;
-		case enumRotType.Right:
-			ActionMove (r, route, f, enumRotType.Front, b, enumRotType.Back);
-			break;
+			var route = GetShortRoute (f, b, l, r);
+
+			switch (route) {
+			case enumRotType.Front:
+				ActionMove (f, route, l, enumRotType.Left, r, enumRotType.Right);
+				break;
+			case enumRotType.Back:
+				ActionMove (b, route, l, enumRotType.Left, r, enumRotType.Right);
+				break;
+			case enumRotType.Left:
+				ActionMove (l, route, f, enumRotType.Front, b, enumRotType.Back);
+				break;
+			case enumRotType.Right:
+				ActionMove (r, route, f, enumRotType.Front, b, enumRotType.Back);
+				break;
+			}
 		}
 	}
 
@@ -131,18 +137,38 @@ public class Enemy : Character
 
 	private void Action (Vector2 vec, enumRotType rot)
 	{
-		Rotation (rot);
-
 		var id = _player.GetID ();
 		var f = GetMovePoint (id, enumRotType.Front);
 		var b = GetMovePoint (id, enumRotType.Back);
 		var l = GetMovePoint (id, enumRotType.Left);
 		var r = GetMovePoint (id, enumRotType.Right);
-		if (_id == f || _id == b || _id == l || _id == r) {
-			_human.Attack ();
-			_player.Damage (_ATK, _id);
-		} else {
+
+		if (_id == f) {
+			Rotation (enumRotType.Back);
+			Attack ();
+		}
+		else if(_id == b){
+			Rotation (enumRotType.Front);
+			Attack ();
+		}
+		else if(_id == l){
+			Rotation (enumRotType.Right);
+			Attack ();
+		}
+		else if(_id == r){
+			Rotation (enumRotType.Left);
+			Attack ();
+		}
+		else {
+			Rotation (rot);
 			Move (vec);
 		}
+	}
+
+	private void Attack()
+	{
+		_human.Attack ();
+		_player.Damage (_ATK, _id);
+		_pId = _player.GetID ();
 	}
 }
