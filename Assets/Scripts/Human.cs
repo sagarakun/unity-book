@@ -2,6 +2,9 @@
 using System.Collections;
 using DG.Tweening;
 
+/// <summary>
+/// 人形のアニメーションを操作するクラス
+/// </summary>
 public class Human : MonoBehaviour
 {
 	private Animator _animator;
@@ -16,11 +19,17 @@ public class Human : MonoBehaviour
 	private ParticleSystem _deadFX;
 	private float _duration;
 
+	/// <summary>
+	/// Animationの秒数指定
+	/// </summary>
 	public void SetDuration (float duration)
 	{
 		_duration = duration;
 	}
 
+	/// <summary>
+	/// 死亡時アニメーション
+	/// </summary>
 	public void Dead ()
 	{
 		transform.DOKill ();
@@ -28,44 +37,60 @@ public class Human : MonoBehaviour
 		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnDead);
 	}
 
+	/// <summary>
+	/// ダメージアニメーション
+	/// </summary>
 	public void Damage ()
 	{
 		transform.DOKill ();
 		_attackFX.Play ();
 		_animator.SetBool (_hushDamage, true);
-		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
+		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnAction);
 	}
 
+	/// <summary>
+	/// 攻撃アニメーション
+	/// </summary>
 	public void Attack ()
 	{
 		transform.DOKill ();
 		_animator.SetBool (_hushAttack, true);
-		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
+		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnAction);
 	}
 
-	public void RunR (float duration)
+	/// <summary>
+	/// 右足で走るアニメーション
+	/// </summary>
+	public void RunR ()
 	{
 		transform.DOKill ();
 		_dashFX.Play ();
-		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
+		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnAction);
 		_animator.SetBool (_hushRunR, true);
 	}
 
-	public void RunL (float duration)
+	/// <summary>
+	/// 左足で走るアニメーション
+	/// </summary>
+	public void RunL ()
 	{
 		transform.DOKill ();
 		_dashFX.Play ();
-		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnJump);
+		transform.DOLocalJump (Vector3.zero, 1, 1, _duration).OnComplete (OnAction);
 		_animator.SetBool (_hushRunL, true);
 	}
 
-	/* - - - - - - - - - - - - - */
-
+	/// <summary>
+	/// 生成時コールバック
+	/// </summary>
 	private void Awake ()
 	{
 		StartCoroutine (SequenceInit ());
 	}
 
+	/// <summary>
+	/// 初期化コルーチン
+	/// </summary>
 	private IEnumerator SequenceInit ()
 	{
 		DOTween.Init ();
@@ -85,7 +110,10 @@ public class Human : MonoBehaviour
 		yield break;
 	}
 
-	private void OnJump ()
+	/// <summary>
+	/// アニメーションのコールバック
+	/// </summary>
+	private void OnAction ()
 	{
 		_dashFX.Stop ();
 		transform.localPosition = Vector3.zero;
@@ -96,14 +124,9 @@ public class Human : MonoBehaviour
 		_animator.SetBool (_hushDamage, false);
 	}
 
-	private void OnAttackFXStart ()
-	{
-	}
-
-	private void OnAttackFXFinish ()
-	{
-	}
-
+	/// <summary>
+	/// 死亡時アニメーションのコールバック
+	/// </summary>
 	private void OnDead ()
 	{
 		_deadFX.Play ();

@@ -3,6 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 
+/// <summary>
+/// キャラクター操作用クラス
+/// PlayerとEnemyの親クラス
+/// </summary>
 public class Character : MonoBehaviour
 {
 	[SerializeField] protected int _HP;
@@ -11,14 +15,15 @@ public class Character : MonoBehaviour
 	protected float _duration;
 	protected List<List<Cell>> _listCells;
 	protected Vector2 _id;
-	protected Vector2 _damegeRot;
 	protected bool _isRight;
 	protected bool _isDamage;
 	protected bool _isDead;
 	protected Human _human;
 
-
-	protected enum enumRotType
+	/// <summary>
+	/// 方向用Enum
+	/// </summary>
+	protected enum enumDirection
 	{
 		Front,
 		Back,
@@ -26,6 +31,9 @@ public class Character : MonoBehaviour
 		Left,
 	}
 
+	/// <summary>
+	/// アクション用Enum
+	/// </summary>
 	protected enum enumAction
 	{
 		Attack,
@@ -46,9 +54,9 @@ public class Character : MonoBehaviour
 	}
 
 	/// <summary>
-	/// セルの設定
+	/// 引数で渡したCellにCharacterがセットされる
 	/// </summary>
-	public void SetID (Cell cell)
+	public void SetCell (Cell cell)
 	{
 		var prev = GetCell (_id);
 		prev.SetObj (null);
@@ -57,7 +65,7 @@ public class Character : MonoBehaviour
 	}
 
 	/// <summary>
-	/// 現在設定中のID用Vector2を返す
+	/// 現在セット中Cellを判別するためのVector2を返す
 	/// </summary>
 	public Vector2 GetID ()
 	{
@@ -72,23 +80,6 @@ public class Character : MonoBehaviour
 		return _isDead;
 	}
 
-	/*
-	 * Mapからの干渉部分 ----------------------------------------------------------------------
-	*/
-
-	/// <summary>
-	/// アクション用Function
-	/// 継承先で設定
-	/// </summary>
-	public virtual void TurnAction ()
-	{
-
-	}
-
-	/*
-	 * コールバック ----------------------------------------------------------------------
-	*/
-
 	/// <summary>
 	/// 生成時コールバック
 	/// </summary>
@@ -97,18 +88,18 @@ public class Character : MonoBehaviour
 		StartCoroutine (SequenceInit ());
 	}
 
+	/// <summary>
+	/// 破棄時コールバック
+	/// </summary>
 	protected virtual void OnDestroy ()
 	{
 		var cell = GetCell (_id);
 		cell.SetObj (null);
 		Destroy (gameObject);
 	}
-	/*
-	 * OtherCharacterからの干渉部分 ----------------------------------------------------------------------
-	*/
 
 	/// <summary>
-	/// ダメージを受けた時呼ばれるFunction
+	/// ダメージを受けた
 	/// </summary>
 	public virtual void Damage (int atk, Vector2 id)
 	{
@@ -117,18 +108,20 @@ public class Character : MonoBehaviour
 		if (_HP <= 0)
 			_isDead = true;
 
-		_damegeRot = id;
 		_isDamage = true;
 
-		if (this is Player)
-			Debug.Log ("プレイヤーに" + atk + "のダメージ");
-		else
-			Debug.Log ("敵" + _index + "に" + atk + "のダメージ");
+		if (this is Player) {
+			if (_isDead)
+				Debug.Log ("プレイヤー死亡");
+			else
+				Debug.Log ("プレイヤーに" + atk + "のダメージ : 残りHPは" + _HP);
+		} else {
+			if (_isDead)
+				Debug.Log ("敵" + _index + "死亡");
+			else
+				Debug.Log ("敵" + _index + "に" + atk + "のダメージ: 残りHPは" + _HP);
+		}
 	}
-		
-	/*
-	 * コルーチン ----------------------------------------------------------------------
-	*/
 
 	/// <summary>
 	/// 初期化コルーチン
@@ -148,33 +141,8 @@ public class Character : MonoBehaviour
 	{
 		_human.Dead ();
 		yield return new WaitForSeconds (_duration * 2);
-		var cell = GetCell (_id);
-		cell.SetObj (null);
-		Destroy (gameObject);
+		Destroy (this);
 		yield break;
-	}
-
-	/*
-	 * Characterの挙動 ----------------------------------------------------------------------
-	*/
-
-	/// <summary>
-	/// リアクションの挙動
-	/// </summary>
-	protected virtual void Reaction ()
-	{
-		_human.Damage ();
-		_isDamage = false;
-
-		if (_damegeRot == GetMovePoint (_id, enumRotType.Left)) {
-			Rotation (enumRotType.Left);
-		} else if (_damegeRot == GetMovePoint (_id, enumRotType.Right)) {
-			Rotation (enumRotType.Right);
-		} else if (_damegeRot == GetMovePoint (_id, enumRotType.Front)) {
-			Rotation (enumRotType.Front);
-		} else if (_damegeRot == GetMovePoint (_id, enumRotType.Back)) {
-			Rotation (enumRotType.Back);
-		}
 	}
 
 	/// <summary>
@@ -185,30 +153,17 @@ public class Character : MonoBehaviour
 		var cell = GetCell (vec);
 		var pos = cell.transform.position;
 		transform.DOMove (pos, _duration);
-		SetID (cell);
+		SetCell (cell);
 	}
 
 	/// <summary>
 	/// 回転
 	/// </summary>
-	protected virtual void Rotation (enumRotType rot)
+	protected virtual void Rotation (enumDirection rot)
 	{
 		var dur = _duration / 2.0f;
 		transform.DOLocalRotate (GetMoveRot (rot), dur);
 	}
-
-	/// <summary>
-	/// 死亡
-	/// </summary>
-	protected virtual void Dead ()
-	{
-		StartCoroutine (SequenceDead ());
-	}
-
-
-	/*
-	 * Util ----------------------------------------------------------------------
-	*/
 
 	/// <summary>
 	/// 引数に入れたCellがActiveかどうかを判別する
@@ -264,17 +219,17 @@ public class Character : MonoBehaviour
 	}
 
 	/// <summary>
-	/// 引数のenumRotTypeに対応するVector3を取得
+	/// 引数のenumDirectionに対応するVector3を取得
 	/// </summary>
-	protected Vector3 GetMoveRot (enumRotType rot)
+	protected Vector3 GetMoveRot (enumDirection rot)
 	{
-		if (rot == enumRotType.Left)
+		if (rot == enumDirection.Left)
 			return new Vector3 (0, -90, 0);
-		else if (rot == enumRotType.Right)
+		else if (rot == enumDirection.Right)
 			return new Vector3 (0, 90, 0);
-		else if (rot == enumRotType.Front)
+		else if (rot == enumDirection.Front)
 			return new Vector3 (0, 0, 0);
-		else if (rot == enumRotType.Back)
+		else if (rot == enumDirection.Back)
 			return new Vector3 (0, 180, 0);
 		else
 			return Vector3.zero;
@@ -282,17 +237,17 @@ public class Character : MonoBehaviour
 
 	/// <summary>
 	/// 第1引数に入れたVector2の前後左右のVector2の中から
-	/// 第2引数に入れたenumRotTypeに対応したものを取得
+	/// 第2引数に入れたenumDirectionに対応したものを取得
 	/// </summary>
-	protected Vector2 GetMovePoint (Vector2 id, enumRotType rot)
+	protected Vector2 GetMovePoint (Vector2 id, enumDirection rot)
 	{
-		if (rot == enumRotType.Front)
+		if (rot == enumDirection.Front)
 			return new Vector2 (id.x, id.y + 1);
-		else if (rot == enumRotType.Back)
+		else if (rot == enumDirection.Back)
 			return new Vector2 (id.x, id.y - 1);
-		else if (rot == enumRotType.Left)
+		else if (rot == enumDirection.Left)
 			return new Vector2 (id.x - 1, id.y);
-		else if (rot == enumRotType.Right)
+		else if (rot == enumDirection.Right)
 			return new Vector2 (id.x + 1, id.y);
 		else
 			return id;

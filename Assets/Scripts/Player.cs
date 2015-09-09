@@ -6,82 +6,85 @@ using DG.Tweening;
 public class Player : Character
 {
 	[SerializeField] private PlayerCamera _camera;
-	private Vector2 _inputID;
 
-	public void SetInputID (Vector2 id)
-	{
-		_inputID = id;
-	}
-
+	/// <summary>
+	/// 衝突判定コールバック
+	/// </summary>
 	private void OnTriggerEnter (Collider other)
 	{
 		var cell = other.gameObject.GetComponent<Cell> ();
 		if (cell != null) {
-			SetID (cell);
+			SetCell (cell);
 			var pos = cell.transform.position;
 			transform.position = pos;
 		}
 	}
 
+	/// <summary>
+	/// ターン時リアクション
+	/// ※プレイヤー専用
+	/// </summary>
 	public void TurnReaction ()
 	{
 		if (_isDead)
-			Dead ();
+			StartCoroutine (SequenceDead ());
 		else if (_isDamage)
-			Reaction ();
+			StartCoroutine (Reaction ());
 	}
 
-	public override void TurnAction ()
+	/// <summary>
+	/// ターン時アクション
+	/// </summary>
+	public void TurnAction (Vector2 vec)
 	{
-		_isDamage = false;
+		if (vec.x == 1)
+			Rotation (enumDirection.Right);
+		else if (vec.x == -1)
+			Rotation (enumDirection.Left);
+		else if (vec.y == 1)
+			Rotation (enumDirection.Front);
+		else if (vec.y == -1)
+			Rotation (enumDirection.Back);
 
-		if (_inputID.x == 1)
-			Rotation (enumRotType.Right);
-		else if (_inputID.x == -1)
-			Rotation (enumRotType.Left);
-		else if (_inputID.y == 1)
-			Rotation (enumRotType.Front);
-		else if (_inputID.y == -1)
-			Rotation (enumRotType.Back);
+		var xr = _id.x + vec.x;
+		var yr = _id.y + vec.y;
 
-		var xr = _id.x + _inputID.x;
-		var yr = _id.y + _inputID.y;
-		var vec = new Vector2 (xr, yr);
-		var cell = GetCell (vec);
+		var cv = new Vector2 (xr, yr);
+		var cell = GetCell (cv);
 
+		//選択されたのがActiveなCellじゃ無ければターン終了
 		if (!cell.GetIsActive ())
 			return;
 		
-		enumAction e; 
 		//敵のいるcellに進もうとした場合	
 		if (cell.GetObj ()) {
 			var enemy = cell.GetObj ().GetComponent<Enemy> ();
 			enemy.Damage (_ATK, _id);
-			e = enumAction.Attack;
+			if (!enemy.IsDead ())
+				_human.Attack ();
+			
 		} else {
 			//何も無いcellに進もうとした場合
-			e = enumAction.Move;
-		}
-
-		switch (e) {
-		case enumAction.Move:
 			Move (cell.GetID ());
 			_camera.Move (cell.transform.position, _duration);
 
 			if (_isRight) {
-				_human.RunR (_duration);
+				_human.RunR ();
 				_isRight = false;
 			} else {
-				_human.RunL (_duration);
+				_human.RunL ();
 				_isRight = true;
 			}
-			break;
-
-		case enumAction.Attack:
-			_human.Attack ();
-			break;
 		}
 	}
-		
 
+	/// <summary>
+	/// リアクションの挙動
+	/// </summary>
+	private IEnumerator Reaction ()
+	{
+		_human.Damage ();
+		_isDamage = false;
+		yield break;
+	}
 }

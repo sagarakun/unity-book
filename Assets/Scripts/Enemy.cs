@@ -6,63 +6,98 @@ using DG.Tweening;
 public class Enemy : Character
 {
 	private Player _player;
-	private Vector2 _pId;
 
+	/// <summary>
+	/// Destroyのコールバック
+	/// </summary>
+	protected override void OnDestroy ()
+	{
+		_player = null;
+		base.OnDestroy ();
+	}
+
+	/// <summary>
+	/// プレイヤー参照のセット
+	/// </summary>
 	public void SetPlayer (Player player)
 	{
 		_player = player;
 	}
 
+	/// <summary>
+	/// 移動
+	/// </summary>
 	protected override void Move (Vector2 id)
 	{
 		base.Move (id);
 		if (_isRight) {
-			_human.RunR (_duration);
+			_human.RunR ();
 			_isRight = false;
 		} else {
-			_human.RunL (_duration);
+			_human.RunL ();
 			_isRight = true;
 		}
 	}
 
-	public override void TurnAction ()
+	/// <summary>
+	/// ターン時行動分岐
+	/// </summary>
+	public void TurnAction ()
 	{
 		if (_isDead) {
-			Dead ();
+			StartCoroutine (SequenceDead ());
 		} else {
 			if (_isDamage)
-				Reaction ();
+				StartCoroutine (Reaction ());
 			else
-				Action ();
+				StartCoroutine (Action ());
 		}
 	}
 
-	private void Action ()
+	/// <summary>
+	/// リアクションの分岐
+	/// </summary>
+	private IEnumerator Reaction ()
 	{
-		var f = GetMovePoint (_id, enumRotType.Front);
-		var b = GetMovePoint (_id, enumRotType.Back);
-		var l = GetMovePoint (_id, enumRotType.Left);
-		var r = GetMovePoint (_id, enumRotType.Right);
+		_human.Damage ();
+		_isDamage = false;
+		Action ();
+		yield break;
+	}
+
+	/// <summary>
+	/// 行動
+	/// </summary>
+	private IEnumerator Action ()
+	{
+		var f = GetMovePoint (_id, enumDirection.Front);
+		var b = GetMovePoint (_id, enumDirection.Back);
+		var l = GetMovePoint (_id, enumDirection.Left);
+		var r = GetMovePoint (_id, enumDirection.Right);
 
 		var route = GetShortRoute (f, b, l, r);
 
 		switch (route) {
-		case enumRotType.Front:
-			Route (f, route, l, enumRotType.Left, r, enumRotType.Right);
+		case enumDirection.Front:
+			Route (f, route, l, enumDirection.Left, r, enumDirection.Right);
 			break;
-		case enumRotType.Back:
-			Route (b, route, l, enumRotType.Left, r, enumRotType.Right);
+		case enumDirection.Back:
+			Route (b, route, l, enumDirection.Left, r, enumDirection.Right);
 			break;
-		case enumRotType.Left:
-			Route (l, route, f, enumRotType.Front, b, enumRotType.Back);
+		case enumDirection.Left:
+			Route (l, route, f, enumDirection.Front, b, enumDirection.Back);
 			break;
-		case enumRotType.Right:
-			Route (r, route, f, enumRotType.Front, b, enumRotType.Back);
+		case enumDirection.Right:
+			Route (r, route, f, enumDirection.Front, b, enumDirection.Back);
 			break;
 		}
+		yield break;
 	}
 
-	private void Route (Vector2 t, enumRotType te, Vector2 tA, enumRotType teA, Vector2 tB, enumRotType teB)
+	/// <summary>
+	/// 移動時ルート選択
+	/// </summary>
+	private void Route (Vector2 t, enumDirection te, Vector2 tA, enumDirection teA, Vector2 tB, enumDirection teB)
 	{
 		if (IsCell (t)) {
 			Branch (t, te);
@@ -82,25 +117,28 @@ public class Enemy : Character
 		}
 	}
 
-	private void Branch (Vector2 vec, enumRotType rot)
+	/// <summary>
+	/// 攻撃、移動の行動分岐
+	/// </summary>
+	private void Branch (Vector2 vec, enumDirection rot)
 	{
 		var id = _player.GetID ();
-		var f = GetMovePoint (id, enumRotType.Front);
-		var b = GetMovePoint (id, enumRotType.Back);
-		var l = GetMovePoint (id, enumRotType.Left);
-		var r = GetMovePoint (id, enumRotType.Right);
+		var f = GetMovePoint (id, enumDirection.Front);
+		var b = GetMovePoint (id, enumDirection.Back);
+		var l = GetMovePoint (id, enumDirection.Left);
+		var r = GetMovePoint (id, enumDirection.Right);
 
 		if (_id == f) {
-			Rotation (enumRotType.Back);
+			Rotation (enumDirection.Back);
 			Attack ();
 		} else if (_id == b) {
-			Rotation (enumRotType.Front);
+			Rotation (enumDirection.Front);
 			Attack ();
 		} else if (_id == l) {
-			Rotation (enumRotType.Right);
+			Rotation (enumDirection.Right);
 			Attack ();
 		} else if (_id == r) {
-			Rotation (enumRotType.Left);
+			Rotation (enumDirection.Left);
 			Attack ();
 		} else {
 			Rotation (rot);
@@ -108,16 +146,21 @@ public class Enemy : Character
 		}
 	}
 
+	/// <summary>
+	/// 攻撃
+	/// </summary>
 	private void Attack ()
 	{
 		_human.Attack ();
 		_player.Damage (_ATK, _id);
-		_pId = _player.GetID ();
 	}
 
-	private enumRotType GetShortRoute (Vector2 f, Vector2 b, Vector2 l, Vector2 r)
+	/// <summary>
+	/// Playerまでの最短ルート取得
+	/// </summary>
+	private enumDirection GetShortRoute (Vector2 f, Vector2 b, Vector2 l, Vector2 r)
 	{
-		var type = enumRotType.Front;
+		var type = enumDirection.Front;
 		var id = _player.GetID ();
 		var dF = Vector2.Distance (id, f);
 		var dB = Vector2.Distance (id, b);
@@ -125,19 +168,22 @@ public class Enemy : Character
 		var dR = Vector2.Distance (id, r);
 
 		if (dF <= dB && dF <= dL && dF <= dR)
-			type = enumRotType.Front;
+			type = enumDirection.Front;
 		else if (dB <= dF && dB <= dL && dB <= dR)
-			type = enumRotType.Back;
+			type = enumDirection.Back;
 		else if (dL <= dF && dL <= dB && dL <= dR)
-			type = enumRotType.Left;
+			type = enumDirection.Left;
 		else if (dR <= dF && dR <= dB && dR <= dL)
-			type = enumRotType.Right;
+			type = enumDirection.Right;
 		return type;
 	}
 
-	private enumRotType GetShortRoute2nd (Vector2 vA, Vector2 vB, enumRotType eA, enumRotType eB)
+	/// <summary>
+	/// Playerまでの第2最短ルート
+	/// </summary>
+	private enumDirection GetShortRoute2nd (Vector2 vA, Vector2 vB, enumDirection eA, enumDirection eB)
 	{
-		var type = enumRotType.Front;
+		var type = enumDirection.Front;
 		var id = _player.GetID ();
 		var dF = Vector2.Distance (id, vA);
 		var dB = Vector2.Distance (id, vB);

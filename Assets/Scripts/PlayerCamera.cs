@@ -4,16 +4,20 @@ using DG.Tweening;
 
 public class PlayerCamera : MonoBehaviour
 {
-	/* - - - - - - - - - - - - - */
 	private Vector3 _offsetPosition;
 
-	/* - - - - - - - - - - - - - */
+	/// <summary>
+	/// 開始時コールバック
+	/// </summary>
 	private void Start ()
 	{
 		DOTween.Init ();
 		_offsetPosition = transform.position;
 	}
 
+	/// <summary>
+	/// Playerを追跡します
+	/// </summary>
 	public void Move (Vector3 pos, float duration)
 	{
 		float x = pos.x + _offsetPosition.x;
